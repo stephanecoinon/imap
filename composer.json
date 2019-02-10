@@ -1,0 +1,33 @@
+{
+    "name": "stephanecoinon/imap",
+    "description": "IMAP client in PHP using sockets",
+    "homepage": "https://github.com/stephanecoinon/imap",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Stéphane Coinon",
+            "email": "me@stephanecoinon.co.uk"
+        }
+    ],
+    "require": {
+        "php": ">=7.1"
+    },
+    "require-dev": {
+        "larapack/dd": "^1.1",
+        "phpunit/phpunit": "^7.0",
+        "vlucas/phpdotenv": "^2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "StephaneCoinon\\Imap\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
