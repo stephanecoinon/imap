@@ -14,6 +14,7 @@
     },
     "require-dev": {
         "larapack/dd": "^1.1",
+        "mockery/mockery": "^1.2",
         "phpunit/phpunit": "^7.0",
         "vlucas/phpdotenv": "^2.5"
     },

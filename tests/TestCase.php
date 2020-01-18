@@ -3,6 +3,7 @@
 namespace Tests;
 
 use Dotenv\Dotenv;
+use Mockery;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 
 class TestCase extends BaseTestCase
@@ -12,6 +13,13 @@ class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->loadDotEnv();
+    }
+
+    public function tearDown()
+    {
+        Mockery::close();
+
+        parent::tearDown();
     }
 
     public function loadDotEnv()

@@ -3,12 +3,13 @@
 namespace StephaneCoinon\Imap;
 
 use Exception;
+use StephaneCoinon\Imap\Command;
 use StephaneCoinon\Imap\Exceptions\ConnectionException;
 use StephaneCoinon\Imap\Exceptions\LoginFailed;
-use StephaneCoinon\Imap\Exceptions\MailboxNotFound;
 use StephaneCoinon\Imap\Mailbox;
 use StephaneCoinon\Imap\Response;
 use StephaneCoinon\Imap\Socket;
+use StephaneCoinon\Imap\Testing\ConnectionMock;
 
 /**
  * @see INTERNET MESSAGE ACCESS PROTOCOL - VERSION 4rev1 <https://tools.ietf.org/html/rfc3501#page-24>
@@ -84,6 +85,16 @@ class Connection
     }
 
     /**
+     * Get a mock conncetion.
+     *
+     * @return ConnectionMock
+     */
+    public static function mock(): ConnectionMock
+    {
+        return new ConnectionMock;
+    }
+
+    /**
      * Open the connection.
      *
      * @return self
@@ -91,15 +102,45 @@ class Connection
      */
     public function open(): self
     {
+        if ($this->socket) {
+            return $this;
+        }
+
         try {
-            $this->socket = new Socket($this->host, $this->port);
-            if ($this->port == static::SSL_PORT) {
-                $this->socket->tls($this->sslOptions);
-            }
-            $this->socket->open();
+            $this->createSocket()->open();
         } catch (Exception $e) {
             throw ConnectionException::make('Invalid host', $e);
         }
+
+        return $this;
+    }
+
+    /**
+     * Create a new socket.
+     *
+     * @return Socket
+     * @throws ConnectionException
+     */
+    public function createSocket()
+    {
+        $this->socket = new Socket($this->host, $this->port);
+
+        if ($this->port == static::SSL_PORT) {
+            $this->socket->tls($this->sslOptions);
+        }
+
+        return $this->socket;
+    }
+
+    /**
+     * Set the connection socket.
+     *
+     * @param Socket $socket
+     * @return self
+     */
+    public function withSocket(Socket $socket): self
+    {
+        $this->socket = $socket;
 
         return $this;
     }
@@ -168,13 +209,15 @@ class Connection
     /**
      * Send an IMAP command to the server.
      *
-     * @param  string $command
+     * @param  string|\StephaneCoinon\Imap\Command $command
      * @return \StephaneCoinon\Imap\Response
      */
-    public function command(string $command): Response
+    public function command($command): Response
     {
+        $commandString = $command instanceof Command ? $command->build() : $command;
+
         $tag = sprintf('%08d', $this->commandTag);
-        $imapCommand = "{$tag} {$command}\r\n";
+        $imapCommand = "{$tag} {$commandString}\r\n";
         $lines = [];
 
         $this->socket->write($imapCommand);
