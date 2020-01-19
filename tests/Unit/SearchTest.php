@@ -3,6 +3,8 @@
 namespace Tests\Unit;
 
 use StephaneCoinon\Imap\Search;
+use Tests\Support\Factories\ResponseFactory;
+use Tests\Support\Mocks\MailboxMock;
 use Tests\TestCase;
 
 class SearchTest extends TestCase
@@ -11,16 +13,6 @@ class SearchTest extends TestCase
     function command_is_built_with_ALL_search_key_by_default()
     {
         $this->assertEquals('SEARCH ALL', (new Search)->build());
-    }
-
-    /** @test */
-    function building_command_from_raw_search_criteria()
-    {
-        $search = Search::createFromCriteria(
-            $criteria = 'FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"'
-        );
-
-        $this->assertEquals("SEARCH $criteria", $search->build());
     }
 
     /** @test */
@@ -41,5 +33,27 @@ class SearchTest extends TestCase
 
         // Overrides the keys initially set
         $this->assertEquals(['ALL'], $search->keys());
+    }
+
+    /** @test */
+    function searching_for_messages_and_getting_uids()
+    {
+        $mailbox = MailboxMock::make(function ($connection) {
+            $connection->shouldReceive('command')
+                ->andReturn((new ResponseFactory)->makeSearch('1 2 3'));
+        });
+        $search = new Search($mailbox);
+
+        $uids = $search->findUids();
+
+        $this->assertEquals([1, 2, 3], $uids);
+    }
+
+    /** @test */
+    function searching_for_a_substring_in_from_field()
+    {
+        $search = (new Search)->from('joe@example.com');
+
+        $this->assertEquals('SEARCH FROM "joe@example.com"', $search->build());
     }
 }

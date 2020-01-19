@@ -1,7 +1,9 @@
 <?php
 
-namespace StephaneCoinon\Imap\Testing;
+namespace Tests\Support\Mocks;
 
+use Closure;
+use Mockery;
 use StephaneCoinon\Imap\Connection;
 use StephaneCoinon\Imap\Response;
 
@@ -16,6 +18,13 @@ class ConnectionMock extends Connection
         //
     }
 
+    public static function make(Closure $expectationCallback = null)
+    {
+        return Mockery::mock(Connection::class, function ($mock) use ($expectationCallback) {
+            $expectationCallback($mock);
+        })->makePartial();
+    }
+
     public function stack(array $stack): self
     {
         $this->responseStack = $stack;
@@ -23,10 +32,10 @@ class ConnectionMock extends Connection
         return $this;
     }
 
-    public function command($command)
+    public function command($command): Response
     {
         return $this->commandId < count($this->responseStack)
             ? $this->responseStack[$this->commandId++]
-            : null;
+            : new Response;
     }
 }

@@ -4,6 +4,7 @@ namespace StephaneCoinon\Imap;
 
 use StephaneCoinon\Imap\Command;
 use StephaneCoinon\Imap\Fetch;
+use StephaneCoinon\Imap\SearchResponse;
 
 /**
  * Builder for IMAP "SEARCH" command.
@@ -24,20 +25,38 @@ class Search extends Command
      *
      * @var string
      */
-    protected $criteria;
+    protected $criteria = '';
 
     /**
-     * Set the raw criteria to use to build the search command.
+     * Mailbox to search in.
      *
-     * @param string $criteria
-     * @return self
+     * @var \StephaneCoinon\Imap\Mailbox
      */
-    public static function createFromCriteria(string $criteria): self
-    {
-        $search = new static;
-        $search->criteria = $criteria;
+    protected $mailbox;
 
-        return $search;
+    /**
+     * Message fetch options.
+     *
+     * @var \StephaneCoinon\Imap\Fetch
+     */
+    protected $fetch;
+
+    public function __construct(Mailbox $mailbox = null, Fetch $fetch = null)
+    {
+        $this->mailbox = $mailbox;
+        $this->fetch = $fetch ?: static::defaultFetchOptions();
+    }
+
+    /**
+     * Get a new Search instance connected to a mailbox.
+     *
+     * @param  Mailbox $mailbox
+     * @param  null|Fetch $fetch message fetch options
+     * @return static
+     */
+    public static function inMailbox(Mailbox $mailbox, Fetch $fetch = null)
+    {
+        return new static($mailbox, $fetch);
     }
 
     public function getCriteria(): string
@@ -75,6 +94,19 @@ class Search extends Command
     }
 
     /**
+     * Match messages with a substring in the From: field
+     *
+     * @param  string $from
+     * @return $this
+     */
+    public function from(string $from)
+    {
+        $this->criteria = sprintf('FROM "%s"', $from);
+
+        return $this;
+    }
+
+    /**
      * Get all messages in the mailbox.
      *
      * @return self
@@ -103,5 +135,37 @@ class Search extends Command
         if ($this->keys == [] || $this->keys == ['ALL']) {
             return 'SEARCH ALL';
         }
+    }
+
+
+    /**
+     * Search for messages and get their UIDs.
+     *
+     * @return string[] UIDs of the messages matching this search
+     */
+    public function findUids()
+    {
+        return (new SearchResponse($this->mailbox->command($this)))->uids();
+    }
+
+    /**
+     * Run the search and return the messages found.
+     *
+     * @param  null|string $criteria raw IMAP criteria
+     * @return Message[]
+     */
+    public function get($criteria = null)
+    {
+        if ($criteria) {
+            $this->criteria = $criteria;
+        }
+
+        // Fetch the message uids
+        $uids = $this->findUids();
+
+        // Fetch the messages
+        return Message::createCollectionFromResponse(
+            $this->mailbox->command($this->fetch->uids($uids))
+        );
     }
 }

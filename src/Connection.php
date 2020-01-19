@@ -9,7 +9,6 @@ use StephaneCoinon\Imap\Exceptions\LoginFailed;
 use StephaneCoinon\Imap\Mailbox;
 use StephaneCoinon\Imap\Response;
 use StephaneCoinon\Imap\Socket;
-use StephaneCoinon\Imap\Testing\ConnectionMock;
 
 /**
  * @see INTERNET MESSAGE ACCESS PROTOCOL - VERSION 4rev1 <https://tools.ietf.org/html/rfc3501#page-24>
@@ -82,16 +81,6 @@ class Connection
     public static function create(): self
     {
         return (new static(...func_get_args()))->open();
-    }
-
-    /**
-     * Get a mock conncetion.
-     *
-     * @return ConnectionMock
-     */
-    public static function mock(): ConnectionMock
-    {
-        return new ConnectionMock;
     }
 
     /**

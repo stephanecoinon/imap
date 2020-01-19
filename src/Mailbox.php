@@ -2,6 +2,8 @@
 
 namespace StephaneCoinon\Imap;
 
+use StephaneCoinon\Imap\Connection;
+
 class Mailbox
 {
     /**
@@ -29,6 +31,17 @@ class Mailbox
         $this->connection = $connection;
     }
 
+    /**
+     * Get the inbox.
+     *
+     * @param  \StephaneCoinon\Imap\Connection $connection
+     * @return static
+     */
+    public static function inbox(Connection $connection)
+    {
+        return new static(static::INBOX, $connection);
+    }
+
     public function name(): string
     {
         return $this->name;
@@ -51,21 +64,6 @@ class Mailbox
     }
 
     /**
-     * Search for messages in this mailbox and get their UIDs.
-     *
-     * @param  string|\StephaneCoinon\Imap\Search $criteria
-     * @return string[] UIDs of the messages matching $criteria
-     */
-    public function searchAndReturnUids($criteria)
-    {
-        $command = $criteria instanceof Search
-        ? $criteria
-        : Search::createFromCriteria($criteria);
-
-        return (new SearchResponse($this->command($command)))->uids();
-    }
-
-    /**
      * Fetch a message by uid.
      *
      * @param integer $uid
@@ -81,20 +79,14 @@ class Mailbox
     /**
      * Search for messages in this mailbox.
      *
-     * @param  string|\StephaneCoinon\Imap\Search $criteria search criteria
+     * @param  null|string|\StephaneCoinon\Imap\Search $criteria search criteria
      * @param  null|\StephaneCoinon\Imap\Fetch $fetch message fetch options
-     * @return Message[]
+     * @return Search|Message[]
      */
-    public function search($criteria, Fetch $fetch = null)
+    public function search($criteria = null, Fetch $fetch = null)
     {
-        $fetch or $fetch = Search::defaultFetchOptions();
+        $search = Search::inMailbox($this, $fetch);
 
-        // Fetch the message uids
-        $uids = $this->searchAndReturnUids($criteria);
-
-        // Fetch the messages
-        return Message::createCollectionFromResponse(
-            $this->command($fetch->uids($uids))
-        );
+        return is_null($criteria) ? $search : $search->get($criteria);
     }
 }

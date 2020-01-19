@@ -2,29 +2,27 @@
 
 namespace Tests\Unit;
 
-use StephaneCoinon\Imap\Connection;
 use StephaneCoinon\Imap\Mailbox;
 use StephaneCoinon\Imap\Message;
-use StephaneCoinon\Imap\Response;
-use Tests\Support\Traits\MocksConnection;
+use StephaneCoinon\Imap\Search;
+use Tests\Support\Factories\MessageFactory;
+use Tests\Support\Factories\ResponseFactory;
+use Tests\Support\Mocks\ConnectionMock;
+use Tests\Support\Mocks\MailboxMock;
 use Tests\TestCase;
 
 class MailboxTest extends TestCase
 {
-    use MocksConnection;
-
-    protected $tag = 1;
-
     /** @test */
     function fetching_a_message_by_uid()
     {
-        $mailbox = $this->mockMailbox(function ($connection) {
+        $mailbox = MailboxMock::make(function ($connection) {
             $connection->shouldReceive('command')
                 ->withArgs(function ($fetch) {
                     return $fetch->items() == ['BODY[]']
                         && $fetch->uids() == [1];
                 })
-                ->andReturn($this->makeResponse());
+                ->andReturn((new ResponseFactory)->make());
         });
 
         $message = $mailbox->fetch(1);
@@ -33,29 +31,14 @@ class MailboxTest extends TestCase
     }
 
     /** @test */
-    function searching_for_messages_and_getting_uids()
-    {
-        $mailbox = $this->mockMailbox(function ($connection) {
-            $connection->shouldReceive('command')
-                ->withArgs(function ($arg) {
-                    return $arg->getCriteria() == 'ALL';
-                })
-                ->andReturn($this->makeSearchResponse('1 2 3'));
-        });
-
-        $uids = $mailbox->searchAndReturnUids('ALL');
-
-        $this->assertEquals([1, 2, 3], $uids);
-    }
-
-    /** @test */
     function search_can_return_one_message()
     {
-        $connection = Connection::mock()->stack([
-            $this->makeSearchResponse('1'),
-            $this->makeResponse()
+        $factory = new ResponseFactory;
+        $connection = (new ConnectionMock)->stack([
+            $factory->makeSearch('1'),
+            $factory->make()
         ]);
-        $mailbox = $this->makeMailbox($connection);
+        $mailbox = Mailbox::inbox($connection);
 
         $messages = $mailbox->search('SUBJECT test');
 
@@ -67,15 +50,17 @@ class MailboxTest extends TestCase
     /** @test */
     function search_can_return_multiple_message()
     {
-        $connection = Connection::mock()->stack([
-            $this->makeSearchResponse('1'),
-            $this->makeResponse(array_merge(
-                $this->makeMessagePartAsArray(1),
-                $this->makeMessagePartAsArray(2),
-                $this->makeMessagePartAsArray(3),
+        $factory = new ResponseFactory;
+        $msgFactory = new MessageFactory;
+        $connection = (new ConnectionMock)->stack([
+            $factory->makeSearch('1'),
+            $factory->make(array_merge(
+                $msgFactory->makePartAsArray(1),
+                $msgFactory->makePartAsArray(2),
+                $msgFactory->makePartAsArray(3),
             )),
         ]);
-        $mailbox = $this->makeMailbox($connection);
+        $mailbox = Mailbox::inbox($connection);
 
         $messages = $mailbox->search('SUBJECT test');
 
@@ -84,55 +69,13 @@ class MailboxTest extends TestCase
         $this->assertContainsOnlyInstancesOf(Message::class, $messages);
     }
 
-    function makeMailbox(Connection $connection)
+    /** @test */
+    function getting_search_builder_instance()
     {
-        return new Mailbox(Mailbox::INBOX, $connection);
-    }
+        $mailbox = Mailbox::inbox(new ConnectionMock);
 
-    function mockMailbox(callable $expectationCallback)
-    {
-        return $this->makeMailbox($this->mockConnection($expectationCallback));
-    }
+        $search = $mailbox->search();
 
-    function makeSearchResponse($response) {
-        return new Response($tag = '00000003', [
-            "* SEARCH {$response}\r\n",
-            "$tag OK Search completed (0.001 + 0.000 secs).\r\n"
-        ]);
-    }
-
-    function makeMessagePartAsArray($id = 1)
-    {
-        return [
-            "* $id FETCH (BODY[] {2769}\r\n",
-            "Subject: test\r\n",
-            "To: joe@example.com\r\n",
-            "Content-Type: multipart/alternative; boundary=\"0000000000009e67480569e8db24\"\r\n",
-            "\r\n",
-            "--0000000000009e67480569e8db24\r\n",
-            "Content-Type: text/plain; charset=\"UTF-8\"\r\n",
-            "\r\n",
-            "lorem ipsum\r\n",
-            "\r\n",
-            "--0000000000009e67480569e8db24\r\n",
-            "Content-Type: text/html; charset=\"UTF-8\"\r\n",
-            "\r\n",
-            "<div dir=\"ltr\">lorem ipsum</div>\r\n",
-            "\r\n",
-            "--0000000000009e67480569e8db24--\r\n",
-            ")\r\n",
-        ];
-    }
-
-    function makeResponse(array $parts = [])
-    {
-        ! $parts and $parts = $this->makeMessagePartAsArray();
-
-        return new Response(
-            $tag = sprintf('%8d', $this->tag++),
-            $parts + [
-                "{$tag} OK Fetch completed (0.002 + 0.000 + 0.001 secs).\r\n"
-            ]
-        );
+        $this->assertInstanceOf(Search::class, $search);
     }
 }

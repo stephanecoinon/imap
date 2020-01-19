@@ -6,17 +6,15 @@ use Mockery;
 use StephaneCoinon\Imap\Command;
 use StephaneCoinon\Imap\Connection;
 use StephaneCoinon\Imap\Socket;
-use Tests\Support\Traits\MocksConnection;
+use Tests\Support\Mocks\ConnectionMock;
 use Tests\TestCase;
 
 class ConnectionTest extends TestCase
 {
-    use MocksConnection;
-
     /** @test */
     function sending_string_command()
     {
-        $connection = $this->mockConnection(function ($connection) {
+        $connection = ConnectionMock::make(function ($connection) {
             $connection->shouldReceive('command')
                 ->with('DUMMY COMMAND');
         });

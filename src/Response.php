@@ -9,7 +9,7 @@ class Response
      *
      * @var string
      */
-    protected $tag;
+    protected $tag = '';
 
     /**
      * Lines returned by IMAP server in the response.
@@ -18,7 +18,7 @@ class Response
      */
     protected $lines = [];
 
-    public function __construct(string $tag, array $lines = [])
+    public function __construct(string $tag = '', array $lines = [])
     {
         $this->tag = $tag;
         $this->lines = $lines;
