@@ -2,9 +2,10 @@
 
 namespace StephaneCoinon\Imap;
 
+use JsonSerializable;
 use StephaneCoinon\Imap\Response;
 
-class Message
+class Message implements JsonSerializable
 {
     /**
      * IMAP response the message originates from.
@@ -40,5 +41,25 @@ class Message
         // Skip the first line ('* n FETCH...')
         // and the last 2 lines (')' and 'tag OK Fetch...')
         return implode(array_slice($lines, 1, $lineCount - 3));
+    }
+
+    public function toArray(): array
+    {
+        return $this->response->lines();
+    }
+
+    public function toJson(): string
+    {
+        return json_encode($this->toArray());
+    }
+
+    public function jsonSerialize()
+    {
+        return $this->toArray();
+    }
+
+    public function __toArray()
+    {
+        return $this->toArray();
     }
 }
